@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Database Stress Testing Framework</title>
+    <style>
+        :root {
+            --ink: #172033;
+            --muted: #607086;
+            --line: #d8e0ea;
+            --panel: #f7f9fc;
+            --accent: #0f6b6e;
+            --accent-strong: #0a4b4d;
+            --danger: #b42318;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            color: var(--ink);
+            background: #ffffff;
+        }
+        header {
+            border-bottom: 1px solid var(--line);
+            padding: 24px clamp(20px, 5vw, 72px);
+        }
+        header h1 {
+            margin: 0 0 6px;
+            font-size: 28px;
+            letter-spacing: 0;
+        }
+        header p { margin: 0; color: var(--muted); }
+        main {
+            padding: 28px clamp(20px, 5vw, 72px) 48px;
+        }
+        .workspace {
+            display: grid;
+            grid-template-columns: minmax(0, 1.4fr) minmax(280px, 0.8fr);
+            gap: 28px;
+            align-items: start;
+        }
+        section { min-width: 0; }
+        h2 {
+            margin: 0 0 16px;
+            font-size: 18px;
+        }
+        .panel {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            padding: 20px;
+        }
+        label {
+            display: block;
+            font-size: 13px;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+        input, select, textarea {
+            width: 100%;
+            border: 1px solid #b9c5d4;
+            border-radius: 6px;
+            padding: 10px 11px;
+            font: inherit;
+            background: #fff;
+            color: var(--ink);
+        }
+        textarea { min-height: 96px; resize: vertical; }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 14px;
+        }
+        .field { margin-bottom: 14px; }
+        .slider-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 64px;
+            gap: 10px;
+            align-items: center;
+        }
+        details {
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            padding: 12px;
+            background: #fff;
+            margin-bottom: 16px;
+        }
+        summary { cursor: pointer; font-weight: 700; }
+        button {
+            border: 0;
+            border-radius: 6px;
+            background: var(--accent);
+            color: #fff;
+            padding: 12px 16px;
+            font-weight: 800;
+            cursor: pointer;
+        }
+        button:hover { background: var(--accent-strong); }
+        .steps {
+            display: grid;
+            gap: 12px;
+        }
+        .step {
+            border-left: 4px solid var(--accent);
+            padding: 8px 0 8px 12px;
+        }
+        .step strong { display: block; margin-bottom: 4px; }
+        .step span { color: var(--muted); font-size: 14px; }
+        .history {
+            margin-top: 28px;
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+        th, td {
+            border-bottom: 1px solid var(--line);
+            padding: 10px 8px;
+            text-align: left;
+            vertical-align: top;
+        }
+        th {
+            color: var(--muted);
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: .04em;
+        }
+        a { color: var(--accent-strong); font-weight: 700; text-decoration: none; }
+        .error { color: var(--danger); margin-top: 10px; }
+        .hint {
+            color: var(--muted);
+            font-size: 13px;
+            line-height: 1.45;
+            margin: 6px 0 0;
+        }
+        .check-row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .check-row input { width: auto; }
+        .workload-help {
+            background: #fff;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            padding: 12px;
+            margin: 10px 0 14px;
+            color: var(--muted);
+            font-size: 13px;
+            line-height: 1.45;
+        }
+        @media (max-width: 900px) {
+            .workspace, .grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+<header>
+    <h1>Database Stress Testing Framework</h1>
+    <p>Concurrent JDBC workload execution with live TPS, latency percentiles, and downloadable reports.</p>
+</header>
+<main>
+    <div class="workspace">
+        <section class="panel">
+            <h2>Configure Test</h2>
+            <form id="stress-form">
+                <div class="field">
+                    <label for="jdbcUrl">JDBC URL</label>
+                    <input id="jdbcUrl" name="jdbcUrl" placeholder="jdbc:postgresql://localhost:5432/mydb" required>
+                </div>
+                <div class="grid">
+                    <div class="field">
+                        <label for="username">Username</label>
+                        <input id="username" name="username" required>
+                    </div>
+                    <div class="field">
+                        <label for="password">Password</label>
+                        <input id="password" name="password" type="password" required>
+                    </div>
+                </div>
+                <div class="field">
+                    <label for="concurrentThreads">Concurrent Threads</label>
+                    <div class="slider-row">
+                        <input id="concurrentThreads" name="concurrentThreads" type="range" min="1" max="500" value="10">
+                        <input id="threadsValue" type="number" min="1" max="500" value="10">
+                    </div>
+                </div>
+                <div class="grid">
+                    <div class="field">
+                        <label for="durationSeconds">Duration Seconds</label>
+                        <input id="durationSeconds" name="durationSeconds" type="number" min="1" value="30" required>
+                    </div>
+                    <div class="field">
+                        <label for="rampUpSeconds">Ramp Up Seconds</label>
+                        <input id="rampUpSeconds" name="rampUpSeconds" type="number" min="0" value="5" required>
+                    </div>
+                </div>
+                <div class="field">
+                    <label for="workloadType">Workload Type</label>
+                    <select id="workloadType" name="workloadType">
+                        <optgroup label="Generic backend workloads">
+                            <option value="READ_HEAVY">Read Heavy - SELECT-focused</option>
+                            <option value="WRITE_HEAVY">Write Heavy - INSERT/UPDATE/DELETE</option>
+                            <option value="MIXED">Mixed - reads, writes, read-after-write</option>
+                            <option value="TRANSACTION_HEAVY">Transaction Heavy - commit/rollback paths</option>
+                        </optgroup>
+                        <optgroup label="Database feature workloads">
+                            <option value="FEATURE_PARTITIONING">Partitioning - range/key access patterns</option>
+                            <option value="FEATURE_INDEXING">Indexing - lookup, range scan, index maintenance</option>
+                            <option value="FEATURE_CACHE_CONTENTION">Cache/Buffer - hot block access and updates</option>
+                            <option value="FEATURE_MVCC_CONCURRENCY">MVCC/Locks - concurrent readers and writers</option>
+                            <option value="FEATURE_QUERY_OPTIMIZER">Query Optimizer - filters and aggregations</option>
+                            <option value="FEATURE_VECTOR_SEARCH">Vector Search - top-k style lookup pattern</option>
+                        </optgroup>
+                        <optgroup label="Benchmark-style workloads">
+                            <option value="TPC_C_LIKE">TPC-C Like - OLTP order/payment transaction mix</option>
+                            <option value="TPC_H_LIKE">TPC-H Like - analytics scans and aggregations</option>
+                        </optgroup>
+                    </select>
+                    <div id="workload-help" class="workload-help"></div>
+                </div>
+                <details>
+                    <summary>Oracle Diagnostics / Report Context</summary>
+                    <p class="hint">Optional fields for the Oracle-style workflow: attach AWR snapshots, SQL Monitor IDs, trace file names, and notes so the final report looks like a real database validation run.</p>
+                    <div class="check-row">
+                        <input id="oracleDiagnosticsEnabled" name="oracleDiagnosticsEnabled" type="checkbox">
+                        <label for="oracleDiagnosticsEnabled" style="margin:0;">Include Oracle diagnostics section in report</label>
+                    </div>
+                    <div class="grid">
+                        <div class="field">
+                            <label for="awrBeginSnapshot">AWR Begin Snapshot</label>
+                            <input id="awrBeginSnapshot" name="awrBeginSnapshot" placeholder="e.g. 18420">
+                        </div>
+                        <div class="field">
+                            <label for="awrEndSnapshot">AWR End Snapshot</label>
+                            <input id="awrEndSnapshot" name="awrEndSnapshot" placeholder="e.g. 18421">
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label for="sqlMonitorReference">SQL Monitor Reference</label>
+                        <input id="sqlMonitorReference" name="sqlMonitorReference" placeholder="SQL_ID / report file / monitor link">
+                    </div>
+                    <div class="field">
+                        <label for="traceFileReference">Trace File Reference</label>
+                        <input id="traceFileReference" name="traceFileReference" placeholder="trace file name or incident reference">
+                    </div>
+                    <div class="field">
+                        <label for="diagnosticNotes">Diagnostic Notes</label>
+                        <textarea id="diagnosticNotes" name="diagnosticNotes" placeholder="Observed waits, plan notes, ORA errors, RAC node behavior, etc."></textarea>
+                    </div>
+                </details>
+                <details>
+                    <summary>Custom Queries</summary>
+                    <p style="color: var(--muted); font-size: 13px;">One SQL statement per line. If provided, these override the default workload strategy.</p>
+                    <textarea id="customQueries" name="customQueries" placeholder="SELECT count(*) FROM my_table"></textarea>
+                </details>
+                <button type="submit">Start Stress Test</button>
+                <div id="form-error" class="error"></div>
+            </form>
+        </section>
+        <aside class="panel">
+            <h2>Execution Flow</h2>
+            <div class="steps">
+                <div class="step"><strong>1. Isolate</strong><span>Create a per-test HikariCP pool against the target database.</span></div>
+                <div class="step"><strong>2. Select Feature</strong><span>Choose generic, feature-specific, or TPC-style workload profiles.</span></div>
+                <div class="step"><strong>3. Apply Load</strong><span>Ramp concurrent workers and execute workload strategies through JDBC.</span></div>
+                <div class="step"><strong>4. Diagnose</strong><span>Publish live metrics and attach AWR, SQL Monitor, trace, and notes to reports.</span></div>
+            </div>
+        </aside>
+    </div>
+
+    <section class="history">
+        <h2>Recent Test History</h2>
+        <table>
+            <thead>
+            <tr>
+                <th>Target DB</th>
+                <th>Threads</th>
+                <th>Duration</th>
+                <th>Workload</th>
+                <th>Avg TPS</th>
+                <th>p99</th>
+                <th>Status</th>
+                <th>Time</th>
+                <th>Actions</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:if="${#lists.isEmpty(history)}">
+                <td colspan="9">No stress tests have been recorded yet.</td>
+            </tr>
+            <tr th:each="test : ${history}">
+                <td th:text="${test.targetDbUrl}"></td>
+                <td th:text="${test.concurrentThreads}"></td>
+                <td th:text="${test.durationSeconds + 's'}"></td>
+                <td th:text="${test.workloadType}"></td>
+                <td th:text="${test.avgTps}"></td>
+                <td th:text="${test.p99LatencyMs + ' ms'}"></td>
+                <td th:text="${test.status}"></td>
+                <td th:text="${#temporals.format(test.startedAt, 'yyyy-MM-dd HH:mm')}"></td>
+                <td><a th:href="@{'/dashboard/' + ${test.id}}">Dashboard</a></td>
+            </tr>
+            </tbody>
+        </table>
+    </section>
+</main>
+<script>
+    const threads = document.getElementById('concurrentThreads');
+    const threadsValue = document.getElementById('threadsValue');
+    threads.addEventListener('input', () => threadsValue.value = threads.value);
+    threadsValue.addEventListener('input', () => threads.value = threadsValue.value);
+    const workloadDescriptions = {
+        READ_HEAVY: 'Runs mostly SELECTs to validate read throughput and basic query latency.',
+        WRITE_HEAVY: 'Runs INSERT/UPDATE/DELETE operations to stress write throughput and index maintenance.',
+        MIXED: 'Combines reads, writes, and read-after-write checks for normal backend traffic.',
+        TRANSACTION_HEAVY: 'Runs multi-step transactions with commits and intentional rollbacks.',
+        FEATURE_PARTITIONING: 'Models partition-key/range access by mixing targeted reads, aggregates, and inserts.',
+        FEATURE_INDEXING: 'Stresses lookup/range-read paths plus updates/inserts that maintain indexes.',
+        FEATURE_CACHE_CONTENTION: 'Uses hot-row/hot-range access to mimic buffer cache and hot block contention.',
+        FEATURE_MVCC_CONCURRENCY: 'Runs concurrent reads and writes inside transactions to expose lock/MVCC behavior.',
+        FEATURE_QUERY_OPTIMIZER: 'Mixes filters and aggregations to observe optimizer-sensitive query behavior.',
+        FEATURE_VECTOR_SEARCH: 'Represents top-k/vector-search style lookup patterns; use custom pgvector/Oracle Vector SQL for real vector tests.',
+        TPC_C_LIKE: 'OLTP-style transaction mix: new order, payment/update, status read, aggregate check.',
+        TPC_H_LIKE: 'Analytics-style workload: scans, filters, and aggregations similar to reporting queries.'
+    };
+    const workloadType = document.getElementById('workloadType');
+    const workloadHelp = document.getElementById('workload-help');
+    function refreshWorkloadHelp() {
+        workloadHelp.textContent = workloadDescriptions[workloadType.value] || '';
+    }
+    workloadType.addEventListener('change', refreshWorkloadHelp);
+    refreshWorkloadHelp();
+
+    document.getElementById('stress-form').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const error = document.getElementById('form-error');
+        error.textContent = '';
+        const form = event.currentTarget;
+        const customQueries = form.customQueries.value.split('\n').map(q => q.trim()).filter(Boolean);
+        const payload = {
+            jdbcUrl: form.jdbcUrl.value,
+            username: form.username.value,
+            password: form.password.value,
+            concurrentThreads: Number(form.concurrentThreads.value),
+            durationSeconds: Number(form.durationSeconds.value),
+            rampUpSeconds: Number(form.rampUpSeconds.value),
+            workloadType: form.workloadType.value,
+            customQueries,
+            oracleDiagnosticsEnabled: form.oracleDiagnosticsEnabled.checked,
+            awrBeginSnapshot: form.awrBeginSnapshot.value,
+            awrEndSnapshot: form.awrEndSnapshot.value,
+            sqlMonitorReference: form.sqlMonitorReference.value,
+            traceFileReference: form.traceFileReference.value,
+            diagnosticNotes: form.diagnosticNotes.value
+        };
+        const response = await fetch('/api/stress/start', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+        });
+        const body = await response.json();
+        if (!response.ok) {
+            error.textContent = body.error || 'Unable to start stress test';
+            return;
+        }
+        window.location.href = body.dashboardUrl;
+    });
+</script>
+</body>
+</html>

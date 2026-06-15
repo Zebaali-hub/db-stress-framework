@@ -1,0 +1,16 @@
+package com.zebacodes.dbstress.model;
+
+public enum WorkloadType {
+    READ_HEAVY,
+    WRITE_HEAVY,
+    MIXED,
+    TRANSACTION_HEAVY,
+    FEATURE_PARTITIONING,
+    FEATURE_INDEXING,
+    FEATURE_CACHE_CONTENTION,
+    FEATURE_MVCC_CONCURRENCY,
+    FEATURE_QUERY_OPTIMIZER,
+    FEATURE_VECTOR_SEARCH,
+    TPC_C_LIKE,
+    TPC_H_LIKE
+}
