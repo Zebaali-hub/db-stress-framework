@@ -6,10 +6,18 @@ services:
     dockerfilePath: ./Dockerfile
     healthCheckPath: /actuator/health
     envVars:
-      - key: SPRING_DATASOURCE_URL
+      - key: DB_HOST
         fromDatabase:
           name: db-stress-history
-          property: connectionString
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: db-stress-history
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: db-stress-history
+          property: database
       - key: SPRING_DATASOURCE_USERNAME
         fromDatabase:
           name: db-stress-history
