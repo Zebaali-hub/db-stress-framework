@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: db-stress-framework
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: SPRING_DATASOURCE_URL
+        fromDatabase:
+          name: db-stress-history
+          property: connectionString
+      - key: SPRING_DATASOURCE_USERNAME
+        fromDatabase:
+          name: db-stress-history
+          property: user
+      - key: SPRING_DATASOURCE_PASSWORD
+        fromDatabase:
+          name: db-stress-history
+          property: password
+
+databases:
+  - name: db-stress-history
+    plan: free

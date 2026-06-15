@@ -343,6 +343,18 @@ SELECT 1
 
 For full default workloads, use PostgreSQL.
 
+## Deployment
+
+This Spring Boot backend should be deployed to a container-friendly platform, not Vercel.
+
+Recommended production-style deployment:
+
+- Render, Railway, Fly.io, or AWS for the Spring Boot backend
+- PostgreSQL for test history
+- Vercel only for a separate static portfolio/demo page
+
+See [Deployment Guide](docs/DEPLOYMENT.md).
+
 ## Author
 
 Zeba Ali, ex-Oracle MTS IC2. Built from real concurrent execution and database performance engineering experience across Oracle RDBMS, Exadata, Exascale, and RAC.
